@@ -1,0 +1,27 @@
+{
+    "model": "./models/concrete_15_2.0-4641.cdb",
+    "boundary_type": "convection",
+    "boundary_selection": "heated_surface",
+    "trial_defaults": {
+        "time_step": 10,
+        "output_surfaces": [
+            {"selection":"media_outside", "label":"T_outer(C)"},
+            {"selection":"media_inside", "label":"T_inner(C)"},
+            {"selection":"media_surface", "label":"T_avg(C)"}
+        ],
+        "output_step": 100
+    },
+    "trials": [
+        {
+            "temperature_time_table": [[0, 100], [7200, 200], [14400, 150]],
+            "convection_time_table": [[0,10], [7200, 20], [14400, 10]],
+            "output_file": "./output/trial_1_results.csv"
+        },
+        {
+            "initial_temperature": 150,
+            "temperature_time_table": [[0, 150], [7200, 250], [14400, 200]],
+            "convection_time_table": [[0,15], [7200, 25], [14400, 15]]
+        }
+    ],
+    "trial_output_folder": "./default_output"
+}

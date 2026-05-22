@@ -1,0 +1,65 @@
+{
+    "model": "./models/concrete_15_2.0-4641B.cdb",
+    "scale": 1.0,
+    "boundary_type": "convection",
+    "boundary_selection": "heated_surface",
+    "trial_defaults": {
+        "time_step": 10,
+        "output_surfaces": [
+            {"selection":"media_surface", "label":"T_avg(C)"}
+        ],
+        "output_step": 100,
+        "materials": [
+            {
+                "body_name": "thermal_body",
+                "propertiesA": {
+                    "thermal_conductivity": [
+                        [20, 2.5],
+                        [100, 2.5],
+                        [400, 2],
+                        [500, 2]
+                    ],
+                    "density": 2400,
+                    "specific_heat": [
+                        [20, 900],
+                        [100, 900],
+                        [200, 1000],
+                        [400, 1100],
+                        [500, 1100]
+                    ]
+                },
+                "properties": {
+                    "thermal_conductivity": [
+                        [20, 3],
+                        [100, 3],
+                        [400, 4],
+                        [500, 4]
+                    ],
+                    "density": 3000,
+                    "specific_heat": [
+                        [20, 450],
+                        [100, 450],
+                        [200, 500],
+                        [400, 550],
+                        [500, 550]
+                    ]
+                }
+            },
+            {
+                "body_name": "pipe_body",
+                "propertiesA": {
+                    "thermal_conductivity": 60.5,
+                    "density": 7850,
+                    "specific_heat": 434
+                },
+                "properties": {
+                    "thermal_conductivity": 121,
+                    "density": 15000,
+                    "specific_heat": 868
+                }
+            }
+        ]
+    },
+    "trial_input_folder": "./solver_inputs/",
+    "trial_output_folder": "./solver_outputs/"
+}

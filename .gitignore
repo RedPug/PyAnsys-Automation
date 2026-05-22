@@ -1,0 +1,8 @@
+.venv_lab
+.vscode
+.concrete_block_files.backup
+_ProjectScratch
+__pycache__
+.ansys
+temp_files
+tests

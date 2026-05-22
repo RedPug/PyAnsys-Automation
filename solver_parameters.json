@@ -1,0 +1,16 @@
+{
+    "model": "./models/concrete_15_1.0-20401.cdb",
+    "boundary_type": "convection",
+    "boundary_selection": "heated_surface",
+    "trial_defaults": {
+        "time_step": 10,
+        "output_surfaces": [
+            {"selection":"media_surface", "label":"T_avg(C)"},
+            {"selection":"heated_surface", "label":"T_inner(C)"},
+            {"selection":"media_outer", "label":"T_outer(C)"}
+        ],
+        "output_step": 100
+    },
+    "trial_input_folder": "./solver_inputs/",
+    "trial_output_folder": "./solver_outputs/"
+}
