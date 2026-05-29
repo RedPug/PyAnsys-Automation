@@ -6,7 +6,12 @@ import json
 import time
 
 global NUM_PROCESSORS, solver_parameters_file
-NUM_PROCESSORS = 1
+
+# Solver runs all combinations of NUM_PROCESSORS and solver_parameters_file. 
+# If you want to run a single combination, put one item in the list.
+# NUM_PROCESSORS = [16,12,8,4,1]
+NUM_PROCESSORS = [1]
+solver_parameters_file = ["./solver_parameters.json"]
 
 C = 273.15
 
@@ -46,7 +51,9 @@ def validate_parameters():
         print(f"Warning: Requested {NUM_PROCESSORS} processors, but only {os.cpu_count()} are available. Using {os.cpu_count()} processors instead.")
         NUM_PROCESSORS = os.cpu_count()
 
-    parameters = json.loads(open(solver_parameters_file,"r").read())
+    with open(solver_parameters_file, "r") as file:
+        parameters = json.loads(file.read())
+
     model_path = parameters["model"]
     parameters["model"] = to_absolute_path(model_path)
 
@@ -122,11 +129,18 @@ def validate_parameters():
 
     # create output files and directories
     for i, trial in enumerate(parameters["trials"]):
-        output_file = to_absolute_path(
+        base_output_file = to_absolute_path(
             trial.get("output_file",
             os.path.join(parameters.get("trial_output_folder", f"./"), f"trial{i:03}_results.csv"))
             )
         
+        output_file = base_output_file
+
+        j = 0
+        while os.path.exists(output_file) and j < 1000:
+            output_file = os.path.splitext(base_output_file)[0] + f"_{j:03}" + os.path.splitext(base_output_file)[1]
+            j += 1
+
         output_folder = os.path.dirname(output_file)
         if not os.path.isdir(output_folder):
             os.makedirs(output_folder)
@@ -173,7 +187,7 @@ def start_solver():
     run_dir = os.path.join(os.getcwd(), "temp_files")
     os.makedirs(run_dir, exist_ok=True)
     print("Launching solver...")
-    mapdl = launch_mapdl(run_location=run_dir, override=True, nproc=NUM_PROCESSORS, start_timeout=80)
+    mapdl = launch_mapdl(run_location=run_dir, override=True, nproc=NUM_PROCESSORS, start_timeout=80, remove_temp_dir_on_exit=True)
 
     mapdl.clear()
     mapdl.cdread("db", parameters["model"])
@@ -248,8 +262,6 @@ def apply_material_properties(trial):
         id += 1
 
     mapdl.finish()
-
-
 
 def create_boundary_conditions():
     global mapdl, parameters
@@ -425,6 +437,7 @@ def solve_all_trials():
 
             header_table = [
                 ["model name", f"{os.path.basename(parameters['model'])}"],
+                ["num processors", f"{NUM_PROCESSORS}"],
                 ["scale", f"{scale}"],
                 ["number of nodes", f"{len(mapdl.mesh.nnum)}"],
                 ["solver time (s)", f"{solver_time:.4f}"],
@@ -459,10 +472,36 @@ def solve_all_trials():
                     file.write(f", {(temperature_table[label][i]+C)/scale**2-C:.4f}")
                 file.write("\n")
 
+def validate_named_selections()->bool:
+    global mapdl, parameters
+
+    mapdl.allsel()
+
+    flag = False
+
+    all_surfaces = np.array(parameters["boundary_selection"])
+
+    for trial in parameters["trials"]:
+        for surf in trial["output_surfaces"]:
+            selection_name = surf["selection"]
+            all_surfaces = np.append(all_surfaces, selection_name)
+
+    for surface in all_surfaces:
+        try:
+            mapdl.cmsel('s', surface, entity="NODE")
+        except Exception as e:
+            print(f"Error: Named selection '{surface}' does not exist in the model. Please ensure that the named selections are correctly defined in the model file.")
+            # print(f"Exception details: {e}")
+            flag = True
+    
+    return flag
+
 def run_mapdl_solver(solver_parameters_path:str = None, num_processors:int = None):
-    global solver_parameters_file, NUM_PROCESSORS
+    global solver_parameters_file, NUM_PROCESSORS, mapdl
+
     if solver_parameters_path is not None:
         solver_parameters_file = solver_parameters_path
+
     if num_processors is not None:
         NUM_PROCESSORS = num_processors
 
@@ -478,14 +517,32 @@ def run_mapdl_solver(solver_parameters_path:str = None, num_processors:int = Non
     except Exception as e:
         print(f"Error connecting to MAPDL: {e}")
         print("Please ensure that MAPDL is installed. Verify that Ansys can be opened and run on your computer. You may need to connect to the UCI VPN to access the Ansys license.")
+        # mapdl.exit()
         return
     
-    create_boundary_conditions()
+    has_errors = validate_named_selections()
+    if has_errors:
+        mapdl.exit()
+        return
 
-    solve_all_trials()
-    
+    try:
+        create_boundary_conditions()
+        solve_all_trials()
+        pass
+    except Exception as e:
+        print(f"Error during solving trials: {e}")
+        mapdl.exit()
+        return
+        
     mapdl.exit()
 
 
 if __name__ == "__main__":
-    run_mapdl_solver(solver_parameters_path = "./solver_parameters.json", num_processors = 3)
+
+    n = NUM_PROCESSORS
+    all_files = solver_parameters_file
+
+    for num_processors in n:
+        print(f"Running solver with {num_processors} processors")
+        for parameter_set in all_files:
+            run_mapdl_solver(solver_parameters_path=parameter_set, num_processors=num_processors)

@@ -6,3 +6,4 @@ __pycache__
 .ansys
 temp_files
 tests
+solver_outputs
